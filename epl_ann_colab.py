@@ -266,72 +266,139 @@ plt.savefig("evaluation_results.png", dpi=150, facecolor=EPL_BG)
 plt.close()
 
 
-# ─── STEP 10: Interactive Prediction Dashboard (Gradio) ──
+# ─── STEP 10: Inter# ─── STEP 10: Premium Interactive Dashboard (Gradio) ──
 import gradio as gr
 
+logo_path = r"C:\Users\ahmed\.gemini\antigravity\brain\5ba6d1f0-3fd9-483a-8502-cbea03d6fdd5\epl_lion_logo_1777765971539.png"
+
 epl_css = """
-body, .gradio-container { background-color: #1a0a2e !important; color: white !important; font-family: 'Barlow', sans-serif; }
-.gradio-container { border: 2px solid #ff005a !important; border-radius: 12px; box-shadow: 0 0 40px rgba(255,0,90,0.25); }
-span, p, h1, h2, h3, label { color: white !important; }
-.output-class { color: #00ff85 !important; font-size: 24px; font-weight: bold; }
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700&display=swap');
+
+:root {
+    --epl-purple: #3d195b;
+    --epl-magenta: #ff005a;
+    --epl-green: #00ff85;
+    --epl-navy: #020035;
+}
+
+body, .gradio-container { 
+    background-color: var(--epl-navy) !important; 
+    color: white !important; 
+    font-family: 'Outfit', sans-serif !important; 
+}
+
+.main-box {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 30px;
+    backdrop-filter: blur(10px);
+}
+
+.header-text {
+    text-align: center;
+    background: linear-gradient(90deg, var(--epl-green), var(--epl-magenta));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 2.5em;
+    font-weight: 800;
+    margin-bottom: 20px;
+}
+
+.predict-btn {
+    background: linear-gradient(45deg, var(--epl-magenta), #e91e63) !important;
+    border: none !important;
+    color: white !important;
+    font-weight: 700 !important;
+    font-size: 1.1em !important;
+    border-radius: 12px !important;
+    transition: transform 0.2s !important;
+}
+
+.predict-btn:hover {
+    transform: scale(1.02);
+}
+
+.output-verdict {
+    background: rgba(0, 255, 133, 0.1);
+    border: 1px solid var(--epl-green);
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    font-size: 1.5em;
+    font-weight: 700;
+    color: var(--epl-green) !important;
+}
+
+span, p, label { color: #ccc !important; font-weight: 500; }
 """
 
 def predict_elite(pos, mins, saves, cleans, goals, assists):
-  # Base dictionary matching df columns before scaling
-  data = {col: 0.0 for col in FEATURES}
-  data['minutes'] = float(mins)
-  
-  if pos == 'Goalkeeper':
-    data['saves'] = float(saves)
-    data['clean_sheets'] = float(cleans)
-  elif pos == 'Defender':
-    data['clean_sheets'] = float(cleans)
-    data['goals_scored'] = float(goals)
-    data['assists'] = float(assists)
-  elif pos in ['Midfielder', 'Forward']:
-    data['goals_scored'] = float(goals)
-    data['assists'] = float(assists)
+    data = {col: 0.0 for col in FEATURES}
+    data['minutes'] = float(mins)
     
-  # Set the one-hot encoding for position
-  pos_col = f"pos_{pos}"
-  if pos_col in data:
-    data[pos_col] = 1.0
-    
-  # Create array in correct order
-  input_arr = np.array([[data[f] for f in FEATURES]])
-  input_scaled = scaler.transform(input_arr)
-  
-  probability = float(best_model.predict(input_scaled, verbose=0).flatten()[0])
-  if probability >= 0.5:
-    return f"🏆 ELITE PLAYER (Confidence: {probability*100:.1f}%)"
-  else:
-    return f"📊 AVERAGE PLAYER (Confidence: {(1-probability)*100:.1f}%)"
-
-with gr.Blocks(css=epl_css, theme=gr.themes.Base()) as interface:
-  gr.Markdown("# ⚽ Dynamic EPL Player Classifier\\nChoose the position first to see relevant stats!")
-  
-  pos_dropdown = gr.Dropdown(['Goalkeeper', 'Defender', 'Midfielder', 'Forward'], label="Select Position", value='Midfielder')
-  
-  with gr.Group():
-    mins = gr.Slider(0, 3800, step=10, label="⏱️ Minutes Played", value=1500)
-    saves = gr.Slider(0, 200, step=1, label="🧤 Saves", visible=False)
-    cleans = gr.Slider(0, 20, step=1, label="🛡️ Clean Sheets", visible=False)
-    goals = gr.Slider(0, 35, step=1, label="⚽ Goals Scored", value=5)
-    assists = gr.Slider(0, 25, step=1, label="🎯 Assists", value=3)
-    
-  def update_ui(pos):
     if pos == 'Goalkeeper':
-      return gr.update(visible=True), gr.update(visible=True), gr.update(visible=False), gr.update(visible=False)
+        data['saves'] = float(saves)
+        data['clean_sheets'] = float(cleans)
     elif pos == 'Defender':
-      return gr.update(visible=False), gr.update(visible=True), gr.update(visible=True), gr.update(visible=True)
+        data['clean_sheets'] = float(cleans)
+        data['goals_scored'] = float(goals)
+        data['assists'] = float(assists)
+    elif pos in ['Midfielder', 'Forward']:
+        data['goals_scored'] = float(goals)
+        data['assists'] = float(assists)
+        
+    pos_col = f"pos_{pos}"
+    if pos_col in data:
+        data[pos_col] = 1.0
+        
+    input_arr = np.array([[data[f] for f in FEATURES]])
+    input_scaled = scaler.transform(input_arr)
+    
+    probability = float(best_model.predict(input_scaled, verbose=0).flatten()[0])
+    
+    if probability >= 0.5:
+        return f"🏆 ELITE PLAYER IDENTIFIED\nScouting Confidence: {probability*100:.1f}%"
     else:
-      return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), gr.update(visible=True)
-      
-  pos_dropdown.change(fn=update_ui, inputs=pos_dropdown, outputs=[saves, cleans, goals, assists])
-  
-  predict_btn = gr.Button("PREDICT PLAYER CLASS", variant='primary')
-  output_text = gr.Text(label="🦁 AI Scouting Verdict")
-  
-  predict_btn.click(fn=predict_elite, inputs=[pos_dropdown, mins, saves, cleans, goals, assists], outputs=output_text)
+        return f"📊 AVERAGE PERFORMER\nScouting Confidence: {(1-probability)*100:.1f}%"
+
+with gr.Blocks(css=epl_css, theme=gr.themes.Default()) as interface:
+    with gr.Column(elem_classes="main-box"):
+        with gr.Row():
+            gr.Image(logo_path, show_label=False, width=120, container=False)
+            gr.Markdown("# PREMIER LEAGUE\\nAI SCOUTING DASHBOARD", elem_classes="header-text")
+            
+        gr.Markdown("---")
+        
+        with gr.Row():
+            with gr.Column():
+                pos_dropdown = gr.Dropdown(
+                    ['Goalkeeper', 'Defender', 'Midfielder', 'Forward'], 
+                    label="PLAYER POSITION", 
+                    value='Midfielder'
+                )
+                mins = gr.Slider(0, 3800, step=10, label="MINUTES PLAYED", value=1500)
+                
+            with gr.Column():
+                saves = gr.Slider(0, 200, step=1, label="SAVES", visible=False)
+                cleans = gr.Slider(0, 20, step=1, label="CLEAN SHEETS", visible=False)
+                goals = gr.Slider(0, 35, step=1, label="GOALS SCORED", value=5)
+                assists = gr.Slider(0, 25, step=1, label="ASSISTS", value=3)
+        
+        predict_btn = gr.Button("ANALYZE PERFORMANCE", elem_classes="predict-btn")
+        
+        gr.Markdown("### 🦁 Scouting Verdict")
+        output_text = gr.Markdown(value="Waiting for input...", elem_classes="output-verdict")
+        
+    def update_ui(pos):
+        if pos == 'Goalkeeper':
+            return gr.update(visible=True), gr.update(visible=True), gr.update(visible=False), gr.update(visible=False)
+        elif pos == 'Defender':
+            return gr.update(visible=False), gr.update(visible=True), gr.update(visible=True), gr.update(visible=True)
+        else:
+            return gr.update(visible=False), gr.update(visible=False), gr.update(visible=True), gr.update(visible=True)
+            
+    pos_dropdown.change(fn=update_ui, inputs=pos_dropdown, outputs=[saves, cleans, goals, assists])
+    predict_btn.click(fn=predict_elite, inputs=[pos_dropdown, mins, saves, cleans, goals, assists], outputs=output_text)
 
 interface.launch(debug=True, share=True)
